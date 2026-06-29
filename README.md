@@ -1,2 +1,45 @@
 # pgddl_tools
-pgddl_tools
+
+`pgddl_tools` is a PostgreSQL extension that adds SQL helpers for inspecting
+and reconstructing DDL for common database objects.
+
+## Features
+
+- `pgddl_tools.get_relation_ddl(relation regclass, include_indexes boolean)`
+  returns DDL one line per row for tables, partitioned tables, foreign tables,
+  views, and materialized views. This avoids the `+` continuation markers that
+  `psql` shows for multi-line text values.
+- `pgddl_tools.get_relation_ddl_text(relation regclass, include_indexes boolean)`
+  returns the same DDL as one multi-line `text` value for callers that need a
+  single string.
+- `pgddl_tools.get_schema_ddl(schema_name name, include_indexes boolean)`
+  returns DDL one line per row for all supported relations in a schema.
+- `pgddl_tools.get_schema_ddl_text(schema_name name, include_indexes boolean)`
+  returns schema DDL as one multi-line `text` value.
+- Helper functions expose quoted names, relation kinds, column definitions,
+  table constraints, and non-constraint indexes.
+
+The generated DDL is intended for inspection, review, and documentation. It is
+not a byte-for-byte replacement for `pg_dump`.
+
+## Build and install
+
+```sh
+make
+sudo make install
+```
+
+Then enable it in a database:
+
+```sql
+CREATE EXTENSION pgddl_tools;
+```
+
+## Examples
+
+```sql
+SELECT pgddl_tools.get_relation_ddl('public.accounts'::regclass);
+SELECT pgddl_tools.get_relation_ddl('public.accounts'::regclass, false);
+SELECT pgddl_tools.get_schema_ddl('public');
+SELECT pgddl_tools.get_relation_ddl_text('public.accounts'::regclass);
+```

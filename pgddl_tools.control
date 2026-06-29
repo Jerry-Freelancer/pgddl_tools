@@ -1,0 +1,4 @@
+# pgddl_tools extension
+comment = 'Utilities for inspecting PostgreSQL object DDL'
+default_version = '1.0.0'
+relocatable = false

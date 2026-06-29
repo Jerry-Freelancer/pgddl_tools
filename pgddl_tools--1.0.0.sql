@@ -108,7 +108,7 @@ AS $$
     );
 $$;
 
-CREATE OR REPLACE FUNCTION pgddl_tools.get_relation_ddl(relation regclass, include_indexes boolean DEFAULT true)
+CREATE OR REPLACE FUNCTION pgddl_tools.get_relation_ddl_text(relation regclass, include_indexes boolean DEFAULT true)
 RETURNS text
 LANGUAGE plpgsql
 STABLE
@@ -173,18 +173,36 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION pgddl_tools.get_schema_ddl(schema_name name, include_indexes boolean DEFAULT true)
+CREATE OR REPLACE FUNCTION pgddl_tools.get_relation_ddl(relation regclass, include_indexes boolean DEFAULT true)
+RETURNS SETOF text
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT regexp_split_to_table(pgddl_tools.get_relation_ddl_text(relation, include_indexes), E'\n');
+$$;
+
+CREATE OR REPLACE FUNCTION pgddl_tools.get_schema_ddl_text(schema_name name, include_indexes boolean DEFAULT true)
 RETURNS text
 LANGUAGE sql
 STABLE
 AS $$
-    SELECT string_agg(pgddl_tools.get_relation_ddl(c.oid::regclass, include_indexes), E'\n\n' ORDER BY c.relkind, c.relname)
+    SELECT string_agg(pgddl_tools.get_relation_ddl_text(c.oid::regclass, include_indexes), E'\n\n' ORDER BY c.relkind, c.relname)
     FROM pg_class c
     JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = schema_name
       AND c.relkind IN ('r', 'p', 'f', 'v', 'm');
 $$;
 
+CREATE OR REPLACE FUNCTION pgddl_tools.get_schema_ddl(schema_name name, include_indexes boolean DEFAULT true)
+RETURNS SETOF text
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT regexp_split_to_table(pgddl_tools.get_schema_ddl_text(schema_name, include_indexes), E'\n');
+$$;
+
 COMMENT ON SCHEMA pgddl_tools IS 'Utilities for inspecting PostgreSQL object DDL';
-COMMENT ON FUNCTION pgddl_tools.get_relation_ddl(regclass, boolean) IS 'Return reconstructed DDL for a table, foreign table, partitioned table, view, or materialized view.';
-COMMENT ON FUNCTION pgddl_tools.get_schema_ddl(name, boolean) IS 'Return reconstructed DDL for supported relations in a schema.';
+COMMENT ON FUNCTION pgddl_tools.get_relation_ddl(regclass, boolean) IS 'Return reconstructed DDL as one row per line, avoiding psql multi-line text continuation markers.';
+COMMENT ON FUNCTION pgddl_tools.get_relation_ddl_text(regclass, boolean) IS 'Return reconstructed DDL as a single text value for a table, foreign table, partitioned table, view, or materialized view.';
+COMMENT ON FUNCTION pgddl_tools.get_schema_ddl(name, boolean) IS 'Return reconstructed schema DDL as one row per line, avoiding psql multi-line text continuation markers.';
+COMMENT ON FUNCTION pgddl_tools.get_schema_ddl_text(name, boolean) IS 'Return reconstructed schema DDL as a single text value.';
